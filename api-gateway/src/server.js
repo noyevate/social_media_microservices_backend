@@ -6,17 +6,10 @@ const helmet = require('helmet')
 const { rateLimit } = require("express-rate-limit");
 const { RedisStore } = require('rate-limit-redis');
 const logger = require('./utils/looger');
-const proxy = require("express-http-proxy");
+const proxy = require("express-http-proxy"); 
 const errorHandler = require('./middleware/error_handling');
-
-
-
-
-
 const app = express()
-
 const Port = process.env.PORT || 300;
-
 const redisClient = new redis(process.env.REDIS_URL);
 
 app.use(helmet());
@@ -24,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 // rate limiting
-const rateLimiter = rateLimit({
+const rateLimitOptions = rateLimit({
     windowMs: 8 * 60 * 1000,
     max: 50,
     standardHeaders: true,
@@ -41,22 +34,20 @@ const rateLimiter = rateLimit({
     })
 });
 
-app.use(rateLimiter)
+app.use(rateLimitOptions)
 
 app.use((req, res, next) => {
-    rateLimiter.consume(req.ip).then(() => next()).catch(() => {
-        logger.warn(`Rate limit execeeded for address: ${req.ip}`)
-        res.status(429).json({
-            success: false,
-            message: "too many requests"
-        })
-    })
+    logger.info(`Recieved ${req.method} request to ${req.url}`);
+    logger.info(`Request body, ${req.body}`);
+    next();
 });
 
 //proxy to connect the routes of the other services (e.g identity service ) to the api gateway
 // 
 
+console.log("started here")
 const proxyOptions = {
+    
     proxyReqPathResolver: (req) => {
         return req.originalUrl.replace(/^\/v1/, "/api")
     },
@@ -68,10 +59,11 @@ const proxyOptions = {
         })
     }
 }
+console.log("finished here")
 // 
 // setting proxy for the identity service
-app.use('v1/auth/', proxy(process.env.IDENTITY_SERVCE_URL, {
-    ...proxy,
+app.use('/v1/auth/', proxy(process.env.IDENTITY_SERVCE_URL, { 
+    ...proxyOptions,
     proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
         proxyReqOpts.headers['Content-Type'] = "application/json"
         return proxyReqOpts

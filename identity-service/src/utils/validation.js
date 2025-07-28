@@ -10,4 +10,13 @@ const validateRegistration = (fdata) => {
     return schma.validate(fdata);
 }
 
-module.exports = {validateRegistration}
+const validateLogin = (fdata) => {
+    const schma = Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().min(6).required()
+    });
+
+    return schma.validate(fdata);
+}
+
+module.exports = {validateRegistration, validateLogin}
