@@ -5,7 +5,7 @@ const logger = require("../utils/looger")
 
 
 const uploadMedia = async (req, res) => {
-    logger.info("Starting media upload...")
+    logger.info("media upload endpoint hit...")
 
     try {
         if(!req.file) {
@@ -44,8 +44,29 @@ const uploadMedia = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "error while uploading media file"
-        })
+        });
     }
 }
 
-module.exports = { uploadMedia }
+const getAllMedia = async(req, res) => {
+    logger.info("get all media endpoint hit...");
+    try {
+
+        const results = await Media.find({});
+        if(results.length < 1) {
+          res.json({
+            message: "no media files"
+          });
+        }
+        res.json(results)
+        
+    } catch (error) {
+        logger.error('error while getting media files', error);
+        return res.status(500).json({
+            success: false,
+            message: `error while getting media files: ${error}`
+        });
+    }
+}
+
+module.exports = { uploadMedia, getAllMedia }

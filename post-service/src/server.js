@@ -7,6 +7,7 @@ const postRoutes = require('./routes/post_service_routes');
 const errorHandler = require('./middleware/error_handling');
 const logger = require('./utils/looger');
 const Redis = require("ioredis");
+const { connectRabbitMQ } = require("./utils/rabbitmq");
 
 const app = express();
 const Port = process.env.PORT || 3002;
@@ -39,10 +40,20 @@ app.use("/api/posts", (req, res, next) => {
 
 app.use(errorHandler);
 
-
-app.listen(Port, () => {
+async function startServer() {
+    
+    try {
+        await connectRabbitMQ();
+        app.listen(Port, () => {
     logger.info(`Post service is running on port: ${Port}`)
 })
+    } catch (error) {
+        logger.error("Failed to connect to server", error);
+        process.exit(1)
+    }
+}
+
+startServer()
 
 // unhandled promise rejection
 process.on('unhandledRejection', (reason, promise) => {

@@ -1,6 +1,7 @@
 const logger = require('../utils/looger');
 const { validateCreatePost } = require('../utils/validation');
 const Post = require('../models/Post');
+const { publishEvent } = require('../utils/rabbitmq');
 
 
 // invalidatingthe cache so that subsequent posts will be available in the 
@@ -36,7 +37,7 @@ const createPost = async(req, res) => {
         });
         await newPost.save();
         // invalidate the redis cache.
-        await invalidatePostCache(req, newPost._id.toString) 
+        await invalidatePostCache(req, newPost._id.toString()) 
         logger.info("Post created successfully", newPost);
         res.status(201).json({
             success: true,
@@ -75,7 +76,7 @@ const getallPost = async(req, res) => {
             totalPosts: total
         }
         // save post in redis cache
-        await req.redisClient.setex(cacheKey, 300, JSON.stringify(result));
+        await req.redisClient.setex(cacheKey, 100, JSON.stringify(result));
         res.json(result);
 
     } catch (error) {
@@ -133,6 +134,13 @@ const deletePost = async(req, res) => {
                 status: false
             });   
         }
+        // publis post delete method ->
+        await publishEvent("post.deleted", {
+            postId: deleteSinglePost._id.toString(),
+            userId: req.user.userId,
+            mediaIds: deleteSinglePost.mediaIds
+        })
+
         await invalidatePostCache(req, postId)
         logger.error('Post deleted successfully', postId);
         return res.status(201).json({
