@@ -36,6 +36,15 @@ const createPost = async(req, res) => {
             mediaIds: mediaIds || []
         });
         await newPost.save();
+        // rabbitMq expose event to save post in search database too
+        await publishEvent("post.created", {
+            postId: newPost._id.toString(),
+            userId: newPost.user.toString(),
+            content: newPost.content,
+            createdAt: newPost.createdAt
+        })
+
+
         // invalidate the redis cache.
         await invalidatePostCache(req, newPost._id.toString()) 
         logger.info("Post created successfully", newPost);
